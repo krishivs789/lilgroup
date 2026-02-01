@@ -166,10 +166,34 @@ export default function AdminPage() {
     updatePageField('images', newImages)
   }
 
-  const removeImage = (index: number) => {
+  const removeImage = async (index: number) => { // Make it async
     if (!pageData) return
-    const newImages = pageData.images.filter((_, i) => i !== index)
-    updatePageField('images', newImages)
+
+    const imageUrlToDelete = pageData.images[index] // Get the URL of the image to delete
+
+    if (!imageUrlToDelete) {
+      setStatus({ message: 'No image URL found to delete.', type: 'error' });
+      return;
+    }
+
+    setStatus({ message: 'Deleting image...', type: 'info' });
+    try {
+      const response = await fetch('/api/admin/image/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: imageUrlToDelete }),
+      });
+
+      if (response.ok) {
+        setStatus({ message: `Image deleted successfully: ${imageUrlToDelete}`, type: 'success' });
+        fetchPagesData(); // Refresh all pages data after successful deletion
+      } else {
+        const errorData = await response.json();
+        setStatus({ message: errorData.error || 'Failed to delete image.', type: 'error' });
+      }
+    } catch (error) {
+      setStatus({ message: 'Error deleting image.', type: 'error' });
+    }
   }
 
   if (isAdmin === undefined) {

@@ -14,15 +14,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const tokenMatch = cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('token='))
   if (!tokenMatch) return res.status(401).end('Not authenticated')
   
-  const form = new IncomingForm()
+  // Create uploads directory if it doesn't exist
+  const uploadDir = path.join(process.cwd(), 'public', 'uploads')
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
+
+  // Create a temporary directory for formidable inside public/uploads
+  const formidableTmpDir = path.join(uploadDir, 'tmp');
+  if (!fs.existsSync(formidableTmpDir)) fs.mkdirSync(formidableTmpDir, { recursive: true });
+  
+  const form = new IncomingForm({ uploadDir: formidableTmpDir }) // Explicitly set upload directory
   const [fields, files] = await form.parse(req)
   
   const file = files.file?.[0]
   if (!file) return res.status(400).json({ ok: false, error: 'No file provided' })
-  
-  // Create uploads directory if it doesn't exist
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads')
-  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
   
   const ext = path.extname(file.originalFilename || file.filepath || 'file') || ''
   const id = uuidv4()
