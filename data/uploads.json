@@ -1,0 +1,74 @@
+[
+  {
+    "id": "seed-1",
+    "url": "https://picsum.photos/seed/edu1/1200/800",
+    "originalName": "Education and Learning Concept",
+    "uploadedAt": "2026-01-31T00:00:00.000Z"
+  },
+  {
+    "id": "seed-2",
+    "url": "https://picsum.photos/seed/edu2/1200/800",
+    "originalName": "Brain Science Research",
+    "uploadedAt": "2026-01-31T00:00:00.000Z"
+  },
+  {
+    "id": "seed-3",
+    "url": "https://picsum.photos/seed/books-collection/1200/800",
+    "originalName": "Book Collection Display",
+    "uploadedAt": "2026-01-30T15:30:00.000Z"
+  },
+  {
+    "id": "seed-4",
+    "url": "https://picsum.photos/seed/study-group/1200/800",
+    "originalName": "Study Group Session",
+    "uploadedAt": "2026-01-30T14:20:00.000Z"
+  },
+  {
+    "id": "seed-5",
+    "url": "https://picsum.photos/seed/library-reading/1200/800",
+    "originalName": "Library Reading Area",
+    "uploadedAt": "2026-01-29T16:45:00.000Z"
+  },
+  {
+    "id": "seed-6",
+    "url": "https://picsum.photos/seed/workshop-learning/1200/800",
+    "originalName": "Learning Workshop Activity",
+    "uploadedAt": "2026-01-29T11:15:00.000Z"
+  },
+  {
+    "id": "seed-7",
+    "url": "https://picsum.photos/seed/mind-map/1200/800",
+    "originalName": "Student Mind Map Project",
+    "uploadedAt": "2026-01-28T13:30:00.000Z"
+  },
+  {
+    "id": "seed-8",
+    "url": "https://picsum.photos/seed/brain-research/1200/800",
+    "originalName": "Brain Research Visualization",
+    "uploadedAt": "2026-01-28T10:00:00.000Z"
+  },
+  {
+    "id": "seed-9",
+    "url": "https://picsum.photos/seed/reading-session/1200/800",
+    "originalName": "Group Reading Session",
+    "uploadedAt": "2026-01-27T15:45:00.000Z"
+  },
+  {
+    "id": "seed-10",
+    "url": "https://picsum.photos/seed/cognitive-science/1200/800",
+    "originalName": "Cognitive Science Diagram",
+    "uploadedAt": "2026-01-27T09:30:00.000Z"
+  },
+  {
+    "id": "seed-11",
+    "url": "https://picsum.photos/seed/education-technology/1200/800",
+    "originalName": "Educational Technology Setup",
+    "uploadedAt": "2026-01-26T14:20:00.000Z"
+  },
+  {
+    "id": "seed-12",
+    "url": "https://picsum.photos/seed/book-club/1200/800",
+    "originalName": "Book Club Meeting",
+    "uploadedAt": "2026-01-26T11:00:00.000Z"
+  }
+]
