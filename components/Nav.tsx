@@ -36,26 +36,56 @@ const navLinks = [
 
 function DesktopNav() {
   const pathname = usePathname()
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <div className="flex items-center gap-4">
+        <NavigationMenu>
+          <NavigationMenuList>
+            {navLinks.map((link) => (
+              <NavigationMenuItem key={link.href}>
+                <Link href={link.href} passHref legacyBehavior>
+                  <NavigationMenuLink
+                    className={cn(
+                      navigationMenuTriggerStyle(),
+                      "hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                    )}
+                  >
+                    {link.label}
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+            ))}
+          </NavigationMenuList>
+        </NavigationMenu>
+        <ThemeSwitcher />
+      </div>
+    )
+  }
 
   return (
     <div className="flex items-center gap-4">
       <NavigationMenu>
         <NavigationMenuList>
           {navLinks.map((link) => (
-            <NavigationMenuItem key={link.href}>
-              <Link href={link.href} legacyBehavior passHref>
-                <NavigationMenuLink
-                  active={pathname === link.href}
-                  className={cn(
-                    navigationMenuTriggerStyle(),
-                    "hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                  )}
-                >
-                  {link.label}
-                </NavigationMenuLink>
-              </Link>
-            </NavigationMenuItem>
-          ))}
+                          <NavigationMenuItem key={link.href}>
+                            <Link href={link.href} passHref legacyBehavior>
+                              <NavigationMenuLink
+                                active={pathname === link.href}
+                                className={cn(
+                                  navigationMenuTriggerStyle(),
+                                  "hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                                )}
+                              >
+                                {link.label}
+                              </NavigationMenuLink>
+                            </Link>
+                          </NavigationMenuItem>          ))}
         </NavigationMenuList>
       </NavigationMenu>
       <ThemeSwitcher />

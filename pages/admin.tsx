@@ -1,6 +1,5 @@
-import { useState, useEffect, ChangeEvent, FormEvent } from 'react'
+import { useState, useEffect, ChangeEvent, FormEvent, useCallback } from 'react'
 import Head from 'next/head'
-import { getLivePagesData, updateLivePagesData, PageData } from '../lib/pagesStore'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -8,17 +7,27 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { List, File, Shield, LogIn, LogOut, Upload, Download, Trash2, PlusCircle } from 'lucide-react'
+import { List, File, Shield, LogIn, LogOut, Upload, Trash2, PlusCircle, Loader2, Save } from 'lucide-react'
+
+// Define the expected structure of a page
+interface PageData {
+  slug: string
+  title: string
+  content: string
+  images: string[]
+}
 
 export default function AdminPage() {
   const [pages, setPages] = useState<{ [key: string]: PageData }>({})
   const [selectedSlug, setSelectedSlug] = useState<string>('')
   const [pageData, setPageData] = useState<PageData | null>(null)
   const [status, setStatus] = useState<{ message: string; type: 'info' | 'success' | 'error' } | null>(null)
-  const [isAdmin, setIsAdmin] = useState<boolean>(false)
+  const [isAdmin, setIsAdmin] = useState<boolean | undefined>(undefined)
   const [file, setFile] = useState<File | null>(null)
   const [password, setPassword] = useState<string>('')
+  const [loadingPages, setLoadingPages] = useState<boolean>(false)
 
+  // Auth check on mount and periodically
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -35,17 +44,44 @@ export default function AdminPage() {
     return () => clearInterval(interval)
   }, [])
 
-  useEffect(() => {
-    setPages(getLivePagesData())
-  }, [isAdmin])
+  // Function to fetch all pages data
+  const fetchPagesData = useCallback(async () => {
+    if (!isAdmin) return;
+    setLoadingPages(true);
+    try {
+      const response = await fetch('/api/admin/pages');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setPages(data);
+      // If a page was selected, refresh its data
+      if (selectedSlug && data[selectedSlug]) {
+        setPageData(data[selectedSlug]);
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch pages data:', error);
+      setStatus({ message: `Failed to load pages: ${error.message}`, type: 'error' });
+    } finally {
+      setLoadingPages(false);
+    }
+  }, [isAdmin, selectedSlug]);
 
+  // Fetch pages data when admin status changes or on initial load
+  useEffect(() => {
+    if (isAdmin) {
+      fetchPagesData();
+    }
+  }, [isAdmin, fetchPagesData]);
+
+  // Update pageData when selectedSlug or pages change
   useEffect(() => {
     if (selectedSlug) {
-      setPageData(pages[selectedSlug] || null)
+      setPageData(pages[selectedSlug] || null);
     } else {
-      setPageData(null)
+      setPageData(null);
     }
-  }, [selectedSlug, pages])
+  }, [selectedSlug, pages]);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault()
@@ -60,6 +96,7 @@ export default function AdminPage() {
         setStatus({ message: 'Successfully logged in!', type: 'success' })
         setIsAdmin(true)
         setPassword('')
+        fetchPagesData(); // Fetch pages data after successful login
       } else {
         setStatus({ message: 'Login failed. Incorrect password.', type: 'error' })
       }
@@ -73,18 +110,15 @@ export default function AdminPage() {
     setStatus({ message: 'Uploading...', type: 'info' })
     const formData = new FormData()
     formData.append('file', file)
+    formData.append('slug', selectedSlug)
 
     try {
       const response = await fetch('/api/admin/upload', { method: 'POST', body: formData })
       const result = await response.json()
       if (response.ok && result.ok) {
         setStatus({ message: `Successfully uploaded: ${file.name}`, type: 'success' })
-        if (pageData) {
-          const newImages = [...pageData.images, result.entry.url]
-          updateLivePagesData('gallery', { images: newImages })
-          setPages(getLivePagesData()) // Refresh pages data
-        }
         setFile(null)
+        fetchPagesData(); // Refresh pages data after successful upload
       } else {
         setStatus({ message: result.error || 'Upload failed.', type: 'error' })
       }
@@ -93,13 +127,30 @@ export default function AdminPage() {
     }
   }
 
+  const handleSavePageData = async () => {
+    if (!pageData || !isAdmin) return;
+    setStatus({ message: 'Saving page data...', type: 'info' });
+    try {
+      const response = await fetch(`/api/admin/pages/${selectedSlug}`, {
+        method: 'POST', // or PUT, depending on API design
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pageData),
+      });
+      if (response.ok) {
+        setStatus({ message: 'Page data saved successfully!', type: 'success' });
+        fetchPagesData(); // Refresh pages data after saving
+      } else {
+        const errorData = await response.json();
+        setStatus({ message: errorData.error || 'Failed to save page data.', type: 'error' });
+      }
+    } catch (error) {
+      setStatus({ message: 'Error saving page data.', type: 'error' });
+    }
+  };
+
   const updatePageField = (field: keyof PageData, value: any) => {
     if (!pageData) return
-    const updatedData = { ...pageData, [field]: value }
-    setPageData(updatedData)
-    updateLivePagesData(selectedSlug, { [field]: value })
-    setPages(getLivePagesData()) // Refresh pages data
-    setStatus({ message: `Page field '${field}' updated.`, type: 'info' })
+    setPageData(prev => prev ? { ...prev, [field]: value } : null)
   }
 
   const updateImage = (index: number, value: string) => {
@@ -111,7 +162,7 @@ export default function AdminPage() {
 
   const addImage = () => {
     if (!pageData) return
-    const newImages = [...pageData.images, `https://picsum.photos/seed/new${Date.now()}/1200/800`]
+    const newImages = [...pageData.images, `/uploads/new-image-${Date.now()}.jpg`] // Placeholder for new image
     updatePageField('images', newImages)
   }
 
@@ -121,14 +172,12 @@ export default function AdminPage() {
     updatePageField('images', newImages)
   }
 
-  const exportData = () => {
-    const dataStr = JSON.stringify(getLivePagesData(), null, 2)
-    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr)
-    const linkElement = document.createElement('a')
-    linkElement.setAttribute('href', dataUri)
-    linkElement.setAttribute('download', 'pages.json')
-    linkElement.click()
-    setStatus({ message: 'Data exported to pages.json. Save it in the /data folder to persist.', type: 'success' })
+  if (isAdmin === undefined) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="h-16 w-16 animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -173,19 +222,22 @@ export default function AdminPage() {
                   <CardDescription>Select a page to edit its content and images.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Select onValueChange={setSelectedSlug} value={selectedSlug} disabled={!isAdmin}>
-                    <SelectTrigger><SelectValue placeholder="Choose a page..." /></SelectTrigger>
+                  <Select onValueChange={setSelectedSlug} value={selectedSlug} disabled={!isAdmin || loadingPages}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a page..." />
+                    </SelectTrigger>
                     <SelectContent>
-                      {Object.keys(pages).map(slug => (
-                        <SelectItem key={slug} value={slug}>{pages[slug]?.title || slug}</SelectItem>
-                      ))}
+                      {loadingPages ? (
+                        <SelectItem value="loading" disabled>Loading...</SelectItem>
+                      ) : (
+                        Object.keys(pages).map(slug => (
+                          <SelectItem key={slug} value={slug}>{pages[slug]?.title || slug}</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </CardContent>
                 <CardFooter className="flex-col items-start gap-4">
-                   <Button onClick={exportData} disabled={!isAdmin} variant="outline" className="w-full">
-                    <Download className="mr-2 h-4 w-4" /> Export All Data
-                  </Button>
                    <Button onClick={() => setIsAdmin(false)} variant="destructive" className="w-full">
                     <LogOut className="mr-2 h-4 w-4" /> Logout
                   </Button>
@@ -242,6 +294,11 @@ export default function AdminPage() {
                     </Button>
                   </div>
                 </CardContent>
+                <CardFooter>
+                  <Button onClick={handleSavePageData} disabled={!isAdmin || loadingPages} className="w-full">
+                    <Save className="mr-2 h-4 w-4" /> Save Page Data
+                  </Button>
+                </CardFooter>
               </Card>
             )}
           </div>

@@ -27,11 +27,18 @@
     "title": "Gallery — lil group",
     "content": "<p>Browse visual collections from readings, projects, and exhibitions that emphasize books, brains, and learning. Our gallery showcases student work, event highlights, and visual representations of learning concepts.</p><h3>Current Exhibitions</h3><p><strong>Mind Maps & Visual Learning:</strong> Student-created visual representations of complex concepts.</p><p><strong>Reading Journey Photos:</strong> Documentation of our community reading events and book clubs.</p><p><strong>Science of Learning Infographics:</strong> Visual explanations of cognitive science principles.</p><h3>Submit Your Work</h3><p>Community members can submit their own visual learning projects, mind maps, and educational artwork for inclusion in our gallery.</p><p>Uploads via admin are shown here - share your visual learning journey with our community!</p>",
     "images": [
-      "https://picsum.photos/seed/gallery1/1200/800",
-      "https://picsum.photos/seed/gallery2/1200/800",
-      "https://picsum.photos/seed/gallery3/800/600",
-      "https://picsum.photos/seed/gallery4/800/600",
-      "https://picsum.photos/seed/gallery5/800/600"
+      "https://picsum.photos/seed/edu1/1200/800",
+      "https://picsum.photos/seed/edu2/1200/800",
+      "https://picsum.photos/seed/books-collection/1200/800",
+      "https://picsum.photos/seed/study-group/1200/800",
+      "https://picsum.photos/seed/library-reading/1200/800",
+      "https://picsum.photos/seed/workshop-learning/1200/800",
+      "https://picsum.photos/seed/mind-map/1200/800",
+      "https://picsum.photos/seed/brain-research/1200/800",
+      "https://picsum.photos/seed/reading-session/1200/800",
+      "https://picsum.photos/seed/cognitive-science/1200/800",
+      "https://picsum.photos/seed/education-technology/1200/800",
+      "https://picsum.photos/seed/book-club/1200/800"
     ]
   },
   {

@@ -4,20 +4,6 @@ import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 
-// Import the live data store
-let updateLivePagesData: any;
-
-try {
-  const pagesStore = require('../../../lib/pagesStore')
-  updateLivePagesData = pagesStore.updateLivePagesData
-} catch (e) {
-  console.warn('Could not load pagesStore:', e)
-  updateLivePagesData = () => {
-    console.warn('pagesStore not available, returning empty data')
-    return { gallery: { images: [] } }
-  }
-}
-
 export const config = { api: { bodyParser: false } }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -27,12 +13,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const cookie = req.headers.cookie || ''
   const tokenMatch = cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('token='))
   if (!tokenMatch) return res.status(401).end('Not authenticated')
-  const token = tokenMatch.split('=')[1]
   
   const form = new IncomingForm()
-  const [fields, files] = await form.parse(req as any)
+  const [fields, files] = await form.parse(req)
   
-  const file = (files.file as any)
+  const file = files.file?.[0]
   if (!file) return res.status(400).json({ ok: false, error: 'No file provided' })
   
   // Create uploads directory if it doesn't exist
@@ -46,29 +31,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   
   // Save file
   try {
+    // Use copy + unlink instead of rename to avoid cross-device errors
     await fs.promises.copyFile(file.filepath, dest)
+    await fs.promises.unlink(file.filepath)
   } catch (e) {
-    return res.status(500).json({ ok: false, error: 'File save failed' })
+    console.error('File save error:', e);
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+    return res.status(500).json({ ok: false, error: 'File save failed', details: errorMessage })
   }
   
-  // For gallery uploads, update the gallery page's images
+  const newEntry = { 
+    id, 
+    url: `/uploads/${destName}`, 
+    originalName: file.originalFilename || destName, 
+    uploadedAt: new Date().toISOString() 
+  }
+
+  // For gallery uploads, update the uploads.json file
   if (fields.slug && fields.slug.toString() === 'gallery') {
-    const liveData = updateLivePagesData()
-    const galleryUrl = `/uploads/${destName}`
-    
-    if (liveData.gallery && liveData.gallery.images) {
-      const newImages = [...liveData.gallery.images, galleryUrl]
-      updateLivePagesData('gallery', { images: newImages })
+    const uploadsJsonPath = path.join(process.cwd(), 'data', 'uploads.json');
+    try {
+      let uploads: any[] = [];
+      if (fs.existsSync(uploadsJsonPath)) {
+        const fileContent = await fs.promises.readFile(uploadsJsonPath, 'utf-8');
+        uploads = JSON.parse(fileContent);
+      }
+      uploads.unshift(newEntry); // Add new image to the beginning
+      await fs.promises.writeFile(uploadsJsonPath, JSON.stringify(uploads, null, 2));
+    } catch (e) {
+      console.error('Failed to update uploads.json:', e);
+      // Decide if you should fail the whole request
     }
   }
   
   return res.status(200).json({ 
     ok: true, 
-    entry: { 
-      id, 
-      url: `/uploads/${destName}`, 
-      originalName: file.originalFilename || destName, 
-      uploadedAt: new Date().toISOString() 
-    }
+    entry: newEntry
   })
 }

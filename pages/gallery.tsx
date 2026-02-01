@@ -1,13 +1,29 @@
 import * as React from 'react'
-import { usePageData } from '../hooks/usePageData'
 import Head from 'next/head'
-import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import { GetStaticProps } from 'next'
 import {
   Dialog,
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import fs from 'fs'
+import path from 'path'
+
+// Define the expected structure of a page's static content
+interface PageContent {
+  slug: string
+  title: string
+  content: string
+  images: string[] // Now includes images from getStaticProps
+}
+
+// Define the expected structure of an uploaded item
+interface Upload {
+  id: string
+  url: string
+  originalName: string
+  uploadedAt: string
+}
 
 function MasonryImageGrid({ images }: { images: string[] }) {
   const [selectedImage, setSelectedImage] = React.useState<string | null>(null)
@@ -37,44 +53,54 @@ function MasonryImageGrid({ images }: { images: string[] }) {
   )
 }
 
-export default function Gallery() {
-  const { page, loading } = usePageData('gallery')
-
-  if (loading) {
-    return (
-      <>
-        <Head>
-          <title>Loading Gallery — lil group</title>
-        </Head>
-        <div className="space-y-8">
-          <Skeleton className="h-12 w-1/3" />
-          <Skeleton className="h-24 w-full" />
-          <div className="columns-2 gap-4 sm:columns-3 md:columns-4">
-            {[...Array(8)].map((_, i) => (
-              <Skeleton key={i} className="mb-4 h-64 w-full" />
-            ))}
-          </div>
-        </div>
-      </>
-    )
-  }
-  
-  if (!page) {
+export default function Gallery({ pageContent }: { pageContent: PageContent }) {
+  if (!pageContent) {
     return <div>Page data could not be loaded.</div>
   }
 
   return (
     <>
       <Head>
-        <title>{page.title ? `${page.title} — lil group` : 'Gallery — lil group'}</title>
+        <title>{pageContent.title ? `${pageContent.title} — lil group` : 'Gallery — lil group'}</title>
       </Head>
       
       <div className="space-y-4">
-        <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">{page.title || 'Gallery'}</h1>
-        <div className="prose prose-lg max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: page.content || '' }} />
+        <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">{pageContent.title || 'Gallery'}</h1>
+        <div className="prose prose-lg max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: pageContent.content || '' }} />
       </div>
       
-      <MasonryImageGrid images={page.images || []} />
+      {pageContent.images.length > 0 ? (
+        <MasonryImageGrid images={pageContent.images} />
+      ) : (
+        <p>No images to display in the gallery.</p>
+      )}
     </>
   )
+}
+
+export const getStaticProps: GetStaticProps = async () => {
+  const pagesPath = path.join(process.cwd(), 'data', 'pages.json');
+  const uploadsPath = path.join(process.cwd(), 'data', 'uploads.json');
+
+  const pagesFile = await fs.promises.readFile(pagesPath, 'utf-8');
+  const pagesArray = JSON.parse(pagesFile);
+  
+  // Find the gallery page content by slug
+  const staticPageContent = pagesArray.find((page: any) => page.slug === 'gallery');
+
+  const uploadsFile = await fs.promises.readFile(uploadsPath, 'utf-8');
+  const uploads: Upload[] = JSON.parse(uploadsFile);
+
+  const images = uploads.map(upload => upload.url);
+
+  // Combine static page content with dynamically loaded images
+  const pageContent: PageContent = {
+    ...staticPageContent,
+    images: images,
+  };
+
+  return {
+    props: { pageContent: pageContent || null },
+    revalidate: 60, // Revalidate every 60 seconds
+  }
 }

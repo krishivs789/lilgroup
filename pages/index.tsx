@@ -1,7 +1,15 @@
-import { usePageData } from '../hooks/usePageData'
 import ContentPage from '@/components/ContentPage'
+import { getLivePagesData, PageData } from '@/lib/pagesStore'
+import { GetServerSideProps } from 'next'
 
-export default function Home() {
-  const { page, loading } = usePageData('home')
-  return <ContentPage page={page} loading={loading} />
+export default function Home({ page }: { page: PageData }) {
+  return <ContentPage page={page} loading={false} />
+}
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  const pages = getLivePagesData()
+  const page = pages['home']
+  return {
+    props: { page },
+  }
 }
