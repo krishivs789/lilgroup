@@ -7,12 +7,16 @@ import { v4 as uuidv4 } from 'uuid'
 export const config = { api: { bodyParser: false } }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  console.log('File upload request received.');
   if (req.method !== 'POST') return res.status(405).end('Method not allowed')
   
   // Simple auth check
   const cookie = req.headers.cookie || ''
   const tokenMatch = cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('token='))
-  if (!tokenMatch) return res.status(401).end('Not authenticated')
+  if (!tokenMatch) {
+    console.warn('File upload: Not authenticated attempt.');
+    return res.status(401).end('Not authenticated')
+  }
   
   // Create uploads directory if it doesn't exist
   const uploadDir = path.join(process.cwd(), 'public', 'uploads')
@@ -26,7 +30,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const [fields, files] = await form.parse(req)
   
   const file = files.file?.[0]
-  if (!file) return res.status(400).json({ ok: false, error: 'No file provided' })
+  if (!file) {
+    console.warn('File upload: No file provided.');
+    return res.status(400).json({ ok: false, error: 'No file provided' })
+  }
   
   const ext = path.extname(file.originalFilename || file.filepath || 'file') || ''
   const id = uuidv4()
@@ -50,6 +57,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     originalName: file.originalFilename || destName, 
     uploadedAt: new Date().toISOString() 
   }
+  console.log(`File uploaded successfully: ${newEntry.url} (original: ${newEntry.originalName})`);
+
 
   // For gallery uploads, update the uploads.json file
   if (fields.slug && fields.slug.toString() === 'gallery') {
@@ -62,6 +71,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       uploads.unshift(newEntry); // Add new image to the beginning
       await fs.promises.writeFile(uploadsJsonPath, JSON.stringify(uploads, null, 2));
+
+      // Try to revalidate the /gallery page on the server so the new image appears immediately
+      try {
+        await (res as NextApiResponse).revalidate('/gallery');
+      } catch (revalidateErr) {
+        // Log but don't fail the upload if revalidation fails
+        console.error('Failed to revalidate /gallery after upload:', revalidateErr);
+      }
     } catch (e) {
       console.error('Failed to update uploads.json:', e);
       // Decide if you should fail the whole request

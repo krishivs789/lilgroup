@@ -1,5 +1,6 @@
 import { useState, useEffect, ChangeEvent, FormEvent, useCallback } from 'react'
 import Head from 'next/head'
+import { useRouter } from 'next/router' // Import useRouter
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -18,6 +19,7 @@ interface PageData {
 }
 
 export default function AdminPage() {
+  const router = useRouter() // Initialize useRouter
   const [pages, setPages] = useState<{ [key: string]: PageData }>({})
   const [selectedSlug, setSelectedSlug] = useState<string>('')
   const [pageData, setPageData] = useState<PageData | null>(null)
@@ -119,6 +121,7 @@ export default function AdminPage() {
         setStatus({ message: `Successfully uploaded: ${file.name}`, type: 'success' })
         setFile(null)
         fetchPagesData(); // Refresh pages data after successful upload
+        // Server-side revalidation is handled in the upload API; no client-side call needed
       } else {
         setStatus({ message: result.error || 'Upload failed.', type: 'error' })
       }
@@ -139,6 +142,7 @@ export default function AdminPage() {
       if (response.ok) {
         setStatus({ message: 'Page data saved successfully!', type: 'success' });
         fetchPagesData(); // Refresh pages data after saving
+        // Server-side revalidation is handled in the upload/delete APIs; no client-side call needed
       } else {
         const errorData = await response.json();
         setStatus({ message: errorData.error || 'Failed to save page data.', type: 'error' });
@@ -187,6 +191,7 @@ export default function AdminPage() {
       if (response.ok) {
         setStatus({ message: `Image deleted successfully: ${imageUrlToDelete}`, type: 'success' });
         fetchPagesData(); // Refresh all pages data after successful deletion
+        // Server-side revalidation is handled in the upload/delete APIs; no client-side call needed
       } else {
         const errorData = await response.json();
         setStatus({ message: errorData.error || 'Failed to delete image.', type: 'error' });

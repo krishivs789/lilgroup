@@ -1,23 +1,20 @@
 import * as React from 'react'
 import Head from 'next/head'
-import { GetStaticProps } from 'next'
 import {
   Dialog,
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import fs from 'fs'
-import path from 'path'
+import { Skeleton } from '@/components/ui/skeleton'
 
-// Define the expected structure of a page's static content
+// Define the expected structure of a page's content
 interface PageContent {
   slug: string
   title: string
   content: string
-  images: string[] // Now includes images from getStaticProps
+  images: string[]
 }
 
-// Define the expected structure of an uploaded item
 interface Upload {
   id: string
   url: string
@@ -53,9 +50,71 @@ function MasonryImageGrid({ images }: { images: string[] }) {
   )
 }
 
-export default function Gallery({ pageContent }: { pageContent: PageContent }) {
-  if (!pageContent) {
-    return <div>Page data could not be loaded.</div>
+function GallerySkeleton() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-12 w-1/2" />
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+      </div>
+      <div className="mt-8 columns-2 gap-4 sm:columns-3 md:columns-4">
+        {[...Array(8)].map((_, i) => (
+          <div key={i} className="mb-4 break-inside-avoid">
+            <Skeleton className="h-40 w-full rounded-lg" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function Gallery() {
+  const [pageContent, setPageContent] = React.useState<PageContent | null>(null)
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true)
+      try {
+        // Fetch page content and image list in parallel
+        const [pageRes, imagesRes] = await Promise.all([
+          fetch('/api/pages/gallery'),
+          fetch('/api/gallery')
+        ])
+
+        if (!pageRes.ok || !imagesRes.ok) {
+          throw new Error('Failed to fetch gallery data')
+        }
+
+        const pageData = await pageRes.json()
+        const imagesData: Upload[] = await imagesRes.json()
+        const images = imagesData.map(img => img.url)
+        
+        setPageContent({
+          slug: pageData.slug || 'gallery',
+          title: pageData.title || 'Gallery',
+          content: pageData.content || '',
+          images,
+        })
+
+      } catch (err) {
+        console.error(err)
+        setError(err instanceof Error ? err.message : 'An unknown error occurred')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+  
+  if (isLoading) {
+    return <GallerySkeleton />
+  }
+
+  if (error || !pageContent) {
+    return <div>Error: {error || 'Page data could not be loaded.'}</div>
   }
 
   return (
@@ -76,31 +135,4 @@ export default function Gallery({ pageContent }: { pageContent: PageContent }) {
       )}
     </>
   )
-}
-
-export const getStaticProps: GetStaticProps = async () => {
-  const pagesPath = path.join(process.cwd(), 'data', 'pages.json');
-  const uploadsPath = path.join(process.cwd(), 'data', 'uploads.json');
-
-  const pagesFile = await fs.promises.readFile(pagesPath, 'utf-8');
-  const pagesArray = JSON.parse(pagesFile);
-  
-  // Find the gallery page content by slug
-  const staticPageContent = pagesArray.find((page: any) => page.slug === 'gallery');
-
-  const uploadsFile = await fs.promises.readFile(uploadsPath, 'utf-8');
-  const uploads: Upload[] = JSON.parse(uploadsFile);
-
-  const images = uploads.map(upload => upload.url);
-
-  // Combine static page content with dynamically loaded images
-  const pageContent: PageContent = {
-    ...staticPageContent,
-    images: images,
-  };
-
-  return {
-    props: { pageContent: pageContent || null },
-    revalidate: 60, // Revalidate every 60 seconds
-  }
 }

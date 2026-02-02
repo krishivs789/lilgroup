@@ -48,16 +48,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     await fs.promises.writeFile(pagesPath, JSON.stringify(pagesArray, null, 2))
 
-    // If the updated page is the gallery, trigger an on-demand revalidation
-    if (slug === 'gallery' && process.env.NEXT_PUBLIC_VERCEL_REVALIDATE_SECRET) {
+    // Revalidate the page if it's the gallery so changes appear immediately
+    if (slug === 'gallery') {
       try {
-        await res.revalidate(`/gallery`);
-        console.log(`Revalidated /gallery`)
-      } catch (err) {
-        console.error('Error revalidating /gallery:', err);
+        await (res as NextApiResponse).revalidate('/gallery')
+      } catch (revalidateErr) {
+        console.error('Failed to revalidate /gallery after saving page data:', revalidateErr)
       }
     }
-    
+
     return res.status(200).json({ message: 'Page data updated successfully' })
   } catch (error) {
     console.error(`Failed to update page data for slug '${slug}':`, error)
